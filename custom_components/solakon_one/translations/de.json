@@ -23,6 +23,18 @@
         },
         "description": "Richte dein Solakon ONE Gerät für die Integration in Home Assistant ein.",
         "title": "Solakon ONE konfigurieren"
+      },
+      "reconfigure": {
+        "data": {
+          "host": "Gerät",
+          "port": "Port"
+        },
+        "data_description": {
+          "host": "IP-Adresse deines Solakon ONE Gerätes",
+          "port": "Modbus-TCP-Port (normalerweise 502)"
+        },
+        "description": "Aktualisiere die Verbindungseinstellungen deines Solakon ONE Gerätes.",
+        "title": "Solakon ONE neu konfigurieren"
       }
     }
   },

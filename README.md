@@ -140,6 +140,8 @@ These sensors display the current values of controllable parameters:
    - **Modbus Device ID**: Usually 1 (range: 1-247)
    - **Update Interval**: How often to poll (1-300 seconds)
 
+After setup, use the integration's **Reconfigure** action to change the host or port. The existing config entry is updated, so entity IDs and recorded history are retained.
+
 ### Network Requirements
 
 - Ensure your Solakon ONE device is connected to your network

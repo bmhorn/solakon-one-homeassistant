@@ -58,6 +58,13 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
     }
 )
 
+STEP_RECONFIGURE_DATA_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_HOST): str,
+        vol.Required(CONF_PORT, default=DEFAULT_PORT): cv.port,
+    }
+)
+
 STEP_OPTIONS_DATA_SCHEMA = vol.Schema(
     {
         vol.Optional(
@@ -120,6 +127,35 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             ),
         )
 
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Handle reconfiguration of the connection settings."""
+        reconfigure_entry = self._get_reconfigure_entry()
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            try:
+                await validate_input(self.hass, reconfigure_entry.data | user_input)
+            except CannotConnect:
+                errors["base"] = "cannot_connect"
+            except Exception:
+                _LOGGER.exception("Unexpected exception")
+                errors["base"] = "unknown"
+            else:
+                return self.async_update_reload_and_abort(
+                    reconfigure_entry,
+                    data_updates=user_input,
+                )
+
+        return self.async_show_form(
+            step_id="reconfigure",
+            errors=errors,
+            data_schema=self.add_suggested_values_to_schema(
+                STEP_RECONFIGURE_DATA_SCHEMA, reconfigure_entry.data
+            ),
+        )
+
     @staticmethod
     @callback
     def async_get_options_flow(
@@ -129,7 +165,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         return OptionsFlowHandler(config_entry)
 
 
-class OptionsFlowHandler(config_entries.OptionsFlowWithReload):
+class OptionsFlowHandler(config_entries.OptionsFlow):
     """Handle options flow for Solakon ONE."""
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
