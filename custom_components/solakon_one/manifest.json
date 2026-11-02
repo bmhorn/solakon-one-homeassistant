@@ -1,6 +1,7 @@
 {
   "domain": "solakon_one",
   "name": "Solakon ONE",
+  "categories": ["energy.solar_batteries"],
   "codeowners": ["@solakon-de"],
   "config_flow": true,
   "dependencies": [],
