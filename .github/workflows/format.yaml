@@ -17,7 +17,7 @@ jobs:
       - name: ⤵️ Checkout repository
         uses: actions/checkout@v6
       - name: 🏗 Set up Python ${{ env.DEFAULT_PYTHON }}
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ env.DEFAULT_PYTHON }}
       - name: 🏗 Install uv
@@ -25,9 +25,7 @@ jobs:
       - name: 🏗 Install ruff
         run: uv sync --locked
       - name: 🚀 Run ruff
-        run: uv tool run ruff format .
-      - name: 🔍 Verify
-        run: git diff --exit-code
+        run: uv run --locked ruff format --check .
   sort:
     name: sort JSON data
     runs-on: ubuntu-latest
