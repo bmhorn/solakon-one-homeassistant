@@ -569,7 +569,8 @@ SENSOR_ENTITY_DESCRIPTIONS: tuple[SolakonSensorEntityDescription, ...] = (
         device_class=SensorDeviceClass.ENUM,
         entity_category=EntityCategory.DIAGNOSTIC,
         entity_registry_enabled_default=False,
-        options=[0, 1, 2, 3, 4, 6, 7],
+        options=["0", "1", "2", "3", "4", "6", "7"],
+        value_fn=str,
     ),
     SolakonSensorEntityDescription(
         key="pv_version",
@@ -640,6 +641,8 @@ async def async_setup_entry(
 
 class SolakonSensor(SolakonEntity, SensorEntity):
     """Representation of a Solakon ONE sensor."""
+
+    entity_description: SolakonSensorEntityDescription
 
     def __init__(
         self,

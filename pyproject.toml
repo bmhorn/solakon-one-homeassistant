@@ -15,9 +15,19 @@ dependencies = [
 dev = [
     "homeassistant-stubs==2025.7.0",
     "mypy>=1.19.1",
+    "pytest>=8.3.5",
+    "pytest-asyncio>=1.0.0",
     "ruff>=0.14.11",
 ]
 
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+pythonpath = ["."]
+
+[tool.uv]
+constraint-dependencies = ["pycares<5"]
+
 [tool.mypy]
+explicit_package_bases = true
 # Ignore missing imports (disable "import not found" errors)
 ignore_missing_imports = true
