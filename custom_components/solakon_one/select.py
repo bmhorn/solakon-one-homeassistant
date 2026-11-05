@@ -25,6 +25,11 @@ from .types import SolakonConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
 
+
+def _options(description: SelectEntityDescription) -> list[str]:
+    return description.options or []
+
+
 # "work_mode": {
 #     "name": "Work Mode Control",
 #     "icon": "mdi:cog",
@@ -84,7 +89,7 @@ async def async_setup_entry(
     # Get device info
     device_info = await config_entry.runtime_data.hub.async_get_device_info()
 
-    entities: list[SolakonSelect] = []
+    entities: list[SelectEntity] = []
     entities.extend(
         SolakonSelect(
             config_entry,
@@ -145,7 +150,7 @@ class SolakonSelect(SolakonEntity, SelectEntity):
                 str_value = f"{int(raw_value)}"
 
                 # Convert numeric value to string option
-                if str_value in self.entity_description.options:
+                if str_value in _options(self.entity_description):
                     self._attr_current_option = str_value
                     _LOGGER.debug(
                         f"{self.entity_description.key}: raw_value={raw_value}, mapped to '{self._attr_current_option}'"
@@ -167,7 +172,7 @@ class SolakonSelect(SolakonEntity, SelectEntity):
 
     async def async_select_option(self, option: str) -> None:
         """Change the selected option."""
-        if option not in self.entity_description.options:
+        if option not in _options(self.entity_description):
             _LOGGER.error(
                 f"Invalid option '{option}' for {self.entity_description.key}. Valid options: {self.entity_description.options}"
             )
@@ -239,7 +244,7 @@ class RemoteControlModeSelect(SolakonEntity, SelectEntity):
                 str_value = f"{int(mode)}"
 
                 # Convert mode value to string option
-                if str_value in self.entity_description.options:
+                if str_value in _options(self.entity_description):
                     self._attr_current_option = str_value
                     _LOGGER.debug(
                         f"Remote control mode: register={register_value:#06x}, mode={mode.name}, option='{self._attr_current_option}'"
@@ -266,7 +271,7 @@ class RemoteControlModeSelect(SolakonEntity, SelectEntity):
 
     async def _async_write_option(self, option: str) -> None:
         """Write the option to the device, limited to the discharge power limit."""
-        if option not in self.entity_description.options:
+        if option not in _options(self.entity_description):
             _LOGGER.error(
                 f"Invalid option '{option}' for remote_control_mode. Valid options: {self.entity_description.options}"
             )
@@ -348,16 +353,15 @@ class ForceModeSelect(SolakonEntity, SelectEntity):
                 mode_value = register_value & 0b1111  # Lower 4 bits
                 str_value = f"{mode_value}"
 
-                if str_value in self.entity_description.options:
+                if str_value in _options(self.entity_description):
                     self._attr_current_option = str_value
                     _LOGGER.debug(
                         f"Force mode: register={register_value:#06x}, mode={str_value}, option='{self._attr_current_option}'"
                     )
                 else:
                     # Not a force mode (could be other remote control mode)
-                    self._attr_current_option = self.entity_description.options[
-                        0
-                    ]  # Default to "Disabled"
+                    options = _options(self.entity_description)
+                    self._attr_current_option = options[0] if options else None
                     _LOGGER.debug(
                         f"Force mode: register={register_value:#06x} not a force mode, showing as Disabled"
                     )
@@ -378,7 +382,7 @@ class ForceModeSelect(SolakonEntity, SelectEntity):
 
     async def _async_write_option(self, option: str) -> None:
         """Write the option to the device, limited to the discharge power limit."""
-        if option not in self.entity_description.options:
+        if option not in _options(self.entity_description):
             _LOGGER.error(
                 f"Invalid option '{option}' for force_mode. Valid options: {self.entity_description.options}"
             )

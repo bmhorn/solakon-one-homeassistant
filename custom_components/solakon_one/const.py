@@ -1,6 +1,6 @@
 """Constants for the Solakon ONE integration."""
 
-from typing import Final
+from typing import Final, NotRequired, TypedDict
 
 from homeassistant.const import Platform
 
@@ -22,9 +22,24 @@ PLATFORMS = [
     Platform.SENSOR,
 ]
 
+
+class RegisterDefinition(TypedDict):
+    """Modbus register layout and optional conversion settings."""
+
+    address: int
+    count: int
+    type: str
+    scale: NotRequired[float]
+    unit: NotRequired[str]
+    interval: NotRequired[str]
+    static: NotRequired[bool]
+    rw: NotRequired[bool]
+    bit: NotRequired[int]
+
+
 # fmt: off
 # Register definitions
-REGISTERS = {
+REGISTERS: dict[str, RegisterDefinition] = {
     # Model Information (Table 3-1)
     "model_name": {"address": 30000, "count": 16, "type": "string", "static": True},
     "serial_number": {"address": 30016, "count": 16, "type": "string", "static": True},

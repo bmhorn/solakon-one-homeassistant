@@ -20,7 +20,7 @@ def _sensor(key: str, data: dict) -> SolakonSensor:
     sensor.coordinator = SimpleNamespace(data=data, last_update_success=True)
     sensor._attr_native_value = None
     sensor._counter_last = None
-    sensor.async_write_ha_state = lambda: None
+    setattr(sensor, "async_write_ha_state", lambda: None)
     return sensor
 
 

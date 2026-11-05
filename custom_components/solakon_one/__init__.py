@@ -18,6 +18,7 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass: HomeAssistant, entry: SolakonConfigEntry) -> bool:
     """Set up Solakon ONE from a config entry."""
+    entry.async_on_unload(entry.add_update_listener(async_reload_entry))
     hub = get_modbus_hub(hass, entry.data | entry.options)  # let options override data
     hub.set_polled_keys(polled_keys(hass, entry))
 

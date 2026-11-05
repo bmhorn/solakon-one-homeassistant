@@ -5,12 +5,12 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from collections.abc import Mapping
 from typing import Any
 
 from bitflags import BitFlags
 from pymodbus.client import AsyncModbusTcpClient
 
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PORT, CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
 
@@ -44,7 +44,7 @@ def _same_span(start: int, end: int) -> bool:
 
 
 def compute_register_batches(
-    registers: dict[str, dict[str, Any]],
+    registers: Mapping[str, Mapping[str, Any]],
     static: bool = False,
     slow: bool | None = None,
     keys: set[str] | None = None,
@@ -73,7 +73,7 @@ def compute_register_batches(
         ]
     """
     # Filter and collect entries with their address info
-    entries: list[tuple[str, dict[str, Any]]] = []
+    entries: list[tuple[str, Mapping[str, Any]]] = []
     for key, config in registers.items():
         is_static = config.get("static", False)
         is_slow = config.get("interval") == "slow"
@@ -94,7 +94,7 @@ def compute_register_batches(
     batches: list[dict[str, Any]] = []
     batch_start = entries[0][1]["address"]
     batch_end = batch_start + entries[0][1].get("count", 1)
-    batch_keys: list[tuple[str, int, int, dict[str, Any]]] = [
+    batch_keys: list[tuple[str, int, int, Mapping[str, Any]]] = [
         (entries[0][0], 0, entries[0][1].get("count", 1), entries[0][1])
     ]
 
@@ -452,7 +452,7 @@ class SolakonModbusHub:
         return await self.async_read_registers()
 
     def _process_register_value(
-        self, registers: list[int], config: dict[str, Any]
+        self, registers: list[int], config: Mapping[str, Any]
     ) -> Any:
         """Process register values based on their configuration."""
         if not registers:
@@ -534,7 +534,7 @@ class SolakonModbusHub:
                 return False
 
 
-def get_modbus_hub(hass: HomeAssistant, data: ConfigEntry) -> SolakonModbusHub:
+def get_modbus_hub(hass: HomeAssistant, data: Mapping[str, Any]) -> SolakonModbusHub:
     """Creates the hub to interact with the modbus."""
     return SolakonModbusHub(
         hass,

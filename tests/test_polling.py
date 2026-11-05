@@ -1,6 +1,9 @@
 """Tests for register batching, the slow read interval and the polled keys."""
 
 from types import SimpleNamespace
+from typing import Any, cast
+
+from homeassistant.core import HomeAssistant
 
 from custom_components.solakon_one import modbus, polling
 from custom_components.solakon_one.binary_sensor import (
@@ -12,6 +15,7 @@ from custom_components.solakon_one.modbus import (
     compute_register_batches,
 )
 from custom_components.solakon_one.sensor import SENSOR_ENTITY_DESCRIPTIONS
+from custom_components.solakon_one.types import SolakonConfigEntry
 
 
 def _spans(batches):
@@ -71,26 +75,27 @@ class _FakeClient:
 
 
 async def test_slow_registers_are_read_once_per_interval(monkeypatch) -> None:
-    hub = SolakonModbusHub(None, "127.0.0.1", 502, 1, 1)
-    hub._client = _FakeClient()
+    hub = SolakonModbusHub(cast(HomeAssistant, None), "127.0.0.1", 502, 1, 1)
+    client = _FakeClient()
+    hub._client = cast(Any, client)
     hub._static_data = {"model_name": "x"}
     now = [1000.0]
     monkeypatch.setattr(modbus.time, "monotonic", lambda: now[0])
 
     first = await hub.async_read_registers()
-    assert 39601 in hub._client.reads
+    assert 39601 in client.reads
     assert "pv_total_energy" in first
 
-    hub._client.reads.clear()
+    client.reads.clear()
     now[0] += modbus.SLOW_INTERVAL - 1
     second = await hub.async_read_registers()
-    assert 39601 not in hub._client.reads
+    assert 39601 not in client.reads
     assert second["pv_total_energy"] == first["pv_total_energy"]
 
-    hub._client.reads.clear()
+    client.reads.clear()
     now[0] += 1
     await hub.async_read_registers()
-    assert 39601 in hub._client.reads
+    assert 39601 in client.reads
 
 
 def test_polled_keys_follow_entity_registry(monkeypatch) -> None:
@@ -108,7 +113,9 @@ def test_polled_keys_follow_entity_registry(monkeypatch) -> None:
         lambda registry, entry_id: registry_entries,
     )
 
-    keys = polling.polled_keys(None, entry)
+    keys = polling.polled_keys(
+        cast(HomeAssistant, None), cast(SolakonConfigEntry, entry)
+    )
 
     assert "battery_soc" not in keys
     assert "network_status" in keys
