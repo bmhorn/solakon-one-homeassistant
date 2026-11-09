@@ -9,6 +9,7 @@ from custom_components.solakon_one.const import REGISTERS
 from custom_components.solakon_one.power_limit import (
     MAX_CHARGE_POWER,
     MAX_DISCHARGE_POWER,
+    MAX_DISCHARGE_REACTIVE_POWER,
     async_cap_remote_power,
     i32_to_words,
     is_discharge_mode,
@@ -26,8 +27,9 @@ DISCHARGE_MODES = [
 OTHER_MODES = [mode for mode in RemoteControlMode if mode not in DISCHARGE_MODES]
 
 
-def test_limit_is_800_watt() -> None:
-    assert MAX_DISCHARGE_POWER == 800
+def test_discharge_limits_are_1200_watt_and_1200_var() -> None:
+    assert MAX_DISCHARGE_POWER == 1200
+    assert MAX_DISCHARGE_REACTIVE_POWER == 1200
 
 
 @pytest.mark.parametrize("mode", DISCHARGE_MODES)
@@ -51,25 +53,27 @@ def test_unknown_mode_counts_as_discharge(value: object) -> None:
     assert is_discharge_mode(value)
     assert max_force_power(value) == MAX_DISCHARGE_POWER
     with pytest.raises(ServiceValidationError):
-        validate_power("force_power", 810, value)
+        validate_power("force_power", 1210, value)
     with pytest.raises(ServiceValidationError):
-        validate_power("remote_active_power", -810, value)
+        validate_power("remote_active_power", -1210, value)
 
 
 @pytest.mark.parametrize("mode", list(RemoteControlMode))
-def test_grid_export_limit_never_above_800(mode: RemoteControlMode) -> None:
-    validate_power("grid_export_power_limit", 800, int(mode))
+def test_grid_export_limit_never_above_1200(mode: RemoteControlMode) -> None:
+    validate_power("grid_export_power_limit", 1200, int(mode))
     with pytest.raises(ServiceValidationError):
-        validate_power("grid_export_power_limit", 810, int(mode))
+        validate_power("grid_export_power_limit", 1210, int(mode))
 
 
 def test_force_power_depends_on_mode() -> None:
     validate_power("force_power", 1200, int(RemoteControlMode.INV_CHARGE_PV_PRIORITY))
     validate_power("force_power", 1200, int(RemoteControlMode.DISABLED))
-    validate_power("force_power", 800, int(RemoteControlMode.INV_DISCHARGE_PV_PRIORITY))
+    validate_power(
+        "force_power", 1200, int(RemoteControlMode.INV_DISCHARGE_PV_PRIORITY)
+    )
     with pytest.raises(ServiceValidationError):
         validate_power(
-            "force_power", 810, int(RemoteControlMode.INV_DISCHARGE_PV_PRIORITY)
+            "force_power", 1210, int(RemoteControlMode.INV_DISCHARGE_PV_PRIORITY)
         )
     with pytest.raises(ServiceValidationError):
         validate_power(
@@ -78,7 +82,7 @@ def test_force_power_depends_on_mode() -> None:
 
 
 @pytest.mark.parametrize("mode", DISCHARGE_MODES)
-@pytest.mark.parametrize("value", [801, -801, 100000, -100000])
+@pytest.mark.parametrize("value", [1201, -1201, 100000, -100000])
 def test_remote_active_power_is_limited_while_discharging(
     mode: RemoteControlMode, value: int
 ) -> None:
@@ -88,8 +92,21 @@ def test_remote_active_power_is_limited_while_discharging(
 
 def test_remote_active_power_charging_is_not_limited() -> None:
     validate_power(
-        "remote_active_power", -1200, int(RemoteControlMode.INV_CHARGE_PV_PRIORITY)
+        "remote_active_power", -100000, int(RemoteControlMode.INV_CHARGE_PV_PRIORITY)
     )
+
+
+@pytest.mark.parametrize("value", [1201, -1201])
+def test_remote_reactive_power_is_limited_to_1200_var_while_discharging(
+    value: int,
+) -> None:
+    with pytest.raises(ServiceValidationError) as err:
+        validate_power(
+            "remote_reactive_power",
+            value,
+            int(RemoteControlMode.INV_DISCHARGE_PV_PRIORITY),
+        )
+    assert err.value.translation_placeholders["unit"] == "var"
 
 
 def test_unrelated_register_is_not_limited() -> None:
@@ -109,12 +126,12 @@ async def test_cap_lowers_setpoints_above_limit() -> None:
     hub.async_write_registers.return_value = True
 
     await async_cap_remote_power(
-        hub, {"remote_active_power": 1200, "remote_reactive_power": -1200}
+        hub, {"remote_active_power": 1500, "remote_reactive_power": -1500}
     )
 
     assert hub.async_write_registers.await_args_list == [
-        ((REGISTERS["remote_active_power"]["address"], [0, 800]),),
-        ((REGISTERS["remote_reactive_power"]["address"], [0xFFFF, 0xFCE0]),),
+        ((REGISTERS["remote_active_power"]["address"], [0, 1200]),),
+        ((REGISTERS["remote_reactive_power"]["address"], [0xFFFF, 0xFB50]),),
     ]
 
 
@@ -122,7 +139,7 @@ async def test_cap_leaves_setpoints_within_limit() -> None:
     hub = AsyncMock()
 
     await async_cap_remote_power(
-        hub, {"remote_active_power": 800, "remote_reactive_power": 0}
+        hub, {"remote_active_power": 1200, "remote_reactive_power": -1200}
     )
 
     hub.async_write_registers.assert_not_awaited()
@@ -146,7 +163,7 @@ async def test_cap_fails_when_write_fails() -> None:
 
     with pytest.raises(HomeAssistantError) as err:
         await async_cap_remote_power(
-            hub, {"remote_active_power": 1200, "remote_reactive_power": 0}
+            hub, {"remote_active_power": 1500, "remote_reactive_power": 0}
         )
 
     assert err.value.translation_key == "discharge_setpoint_write_failed"

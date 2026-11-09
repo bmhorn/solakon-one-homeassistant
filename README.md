@@ -272,15 +272,15 @@ shown in the Solakon app or web portal.
 - `Minimum SoC OnGrid Control`: Set minimum SoC when grid-connected (0-100%)
 
 **Remote Power Control**
-- `Remote Active Power Control`: Set active power command (-100000W to +800W)
+- `Remote Active Power Control`: Set active power command (-100000W to +1200W)
   - Negative values = charging/import
   - Positive values = discharging/export
-- `Remote Reactive Power Control`: Set reactive power command (-100kVAR to +100kVAR, -800 to +800 while a discharge mode is active)
+- `Remote Reactive Power Control`: Set reactive power command (-100kVAR to +100kVAR, -1200 to +1200 var while a discharge mode is active)
 - `Remote Timeout Control`: Set timeout for remote control commands (0-3600 seconds)
-- `Force mode power`: Power for force charge (up to 1200W) or force discharge (up to 800W)
-- `Grid export power limit`: Maximum power that is exported to the grid (0-800W)
+- `Force mode power`: Power for force charge or force discharge (up to 1200W)
+- `Grid export power limit`: Maximum power that is exported to the grid (0-1200W)
 
-> ⚠️ **Discharge limit**: The integration does not accept discharge settings above 800W. Values above 800W are rejected for the grid export power limit, for force mode power while discharging and for the remote power setpoints while a discharge mode is active. When a discharge mode is selected, the device is read first and remote power setpoints above 800W that are left over from charging are lowered to 800W before the mode is enabled. Charging up to 1200W is not affected. Values that are already stored on the device, or that are changed outside of Home Assistant (e.g. in the Solakon app), are not corrected.
+> ⚠️ **Discharge limit**: The integration does not accept active discharge settings above 1200W or reactive power settings above 1200var. These limits apply to the grid export power limit, force mode power while discharging and remote power setpoints while a discharge mode is active. Before a discharge mode is enabled, current remote setpoints are read and capped at 1200W active power and 1200var reactive power if necessary. Values are not otherwise corrected automatically, and changes made outside Home Assistant (e.g. in the Solakon app) are not monitored. Charging up to 1200W is not affected.
 
 > ⚠️ **Warning**: Modifying these settings can affect your system's operation. Make sure you understand what each setting does before changing it. Some settings may require the device to be in specific modes to take effect.
 

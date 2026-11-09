@@ -168,7 +168,7 @@ FORCE_POWER_NUMBER_ENTITY_DESCRIPTION = NumberEntityDescription(
     entity_category=EntityCategory.CONFIG,
     native_unit_of_measurement=UnitOfPower.WATT,
     native_min_value=0,
-    native_max_value=MAX_CHARGE_POWER,  # Lowered to 800W while discharging, see ForcePowerNumber
+    native_max_value=MAX_CHARGE_POWER,  # Upper bound; ForcePowerNumber applies the active-mode limit.
     native_step=10,
 )
 

@@ -20,8 +20,9 @@ from .remote_control import RemoteControlDirection, decode_remote_control
 
 _LOGGER = logging.getLogger(__name__)
 
-MAX_DISCHARGE_POWER = 800  # W
+MAX_DISCHARGE_POWER = 1200  # W
 MAX_CHARGE_POWER = 1200  # W
+MAX_DISCHARGE_REACTIVE_POWER = 1200  # var
 
 # Setpoints that are used as the power command while remote control is active
 REMOTE_POWER_KEYS = ("remote_active_power", "remote_reactive_power")
@@ -88,7 +89,12 @@ def power_range(key: str, remote_control_value: object) -> tuple[int, int] | Non
     if key == "force_power":
         return (0, max_force_power(remote_control_value))
     if key in REMOTE_POWER_KEYS and is_discharge_mode(remote_control_value):
-        return (-MAX_DISCHARGE_POWER, MAX_DISCHARGE_POWER)
+        maximum = (
+            MAX_DISCHARGE_REACTIVE_POWER
+            if key == "remote_reactive_power"
+            else MAX_DISCHARGE_POWER
+        )
+        return (-maximum, maximum)
     return None
 
 
@@ -104,6 +110,7 @@ def validate_power(key: str, value: float, remote_control_value: object) -> None
             "value": f"{value:g}",
             "min": str(limits[0]),
             "max": str(limits[1]),
+            "unit": "var" if key == "remote_reactive_power" else "W",
         },
     )
 
@@ -148,7 +155,12 @@ async def async_cap_remote_power(
                 translation_placeholders={"key": key},
             )
 
-        capped = max(-MAX_DISCHARGE_POWER, min(MAX_DISCHARGE_POWER, int(value)))
+        maximum = (
+            MAX_DISCHARGE_REACTIVE_POWER
+            if key == "remote_reactive_power"
+            else MAX_DISCHARGE_POWER
+        )
+        capped = max(-maximum, min(maximum, int(value)))
         if capped == int(value):
             continue
 
@@ -162,6 +174,7 @@ async def async_cap_remote_power(
                 translation_key="discharge_setpoint_write_failed",
                 translation_placeholders={
                     "key": key,
-                    "max": str(MAX_DISCHARGE_POWER),
+                    "max": str(maximum),
+                    "unit": "var" if key == "remote_reactive_power" else "W",
                 },
             )

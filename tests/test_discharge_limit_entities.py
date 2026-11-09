@@ -66,21 +66,21 @@ def description(key: str):
 
 
 def test_static_maximums() -> None:
-    assert description("grid_export_power_limit").native_max_value == 800
-    assert description("remote_active_power").native_max_value == 800
+    assert description("grid_export_power_limit").native_max_value == 1200
+    assert description("remote_active_power").native_max_value == 1200
 
 
-async def test_grid_export_power_limit_rejects_more_than_800() -> None:
+async def test_grid_export_power_limit_rejects_more_than_1200() -> None:
     entry = make_entry({"remote_control": 0})
     number = SolakonNumber(entry, {}, description("grid_export_power_limit"))
 
     with pytest.raises(ServiceValidationError):
-        await number.async_set_native_value(1200)
+        await number.async_set_native_value(1210)
     entry.runtime_data.hub.async_write_registers.assert_not_awaited()
 
-    await number.async_set_native_value(800)
+    await number.async_set_native_value(1200)
     entry.runtime_data.hub.async_write_registers.assert_awaited_once_with(
-        REGISTERS["grid_export_power_limit"]["address"], [0, 800]
+        REGISTERS["grid_export_power_limit"]["address"], [0, 1200]
     )
 
 
@@ -89,7 +89,7 @@ async def test_remote_active_power_magnitude_limited_while_discharging() -> None
     number = SolakonNumber(entry, {}, description("remote_active_power"))
 
     with pytest.raises(ServiceValidationError):
-        await number.async_set_native_value(-1200)
+        await number.async_set_native_value(-1300)
     entry.runtime_data.hub.async_write_registers.assert_not_awaited()
 
 
@@ -97,14 +97,14 @@ async def test_remote_active_power_charging_still_allowed() -> None:
     entry = make_entry({"remote_control": FORCE_CHARGE})
     number = SolakonNumber(entry, {}, description("remote_active_power"))
 
-    await number.async_set_native_value(-1200)
+    await number.async_set_native_value(-5000)
 
     entry.runtime_data.hub.async_write_registers.assert_awaited_once()
 
 
 @pytest.mark.parametrize(
     ("remote_control", "maximum"),
-    [(FORCE_DISCHARGE, 800), (FORCE_CHARGE, 1200), (0, 1200), (None, 800)],
+    [(FORCE_DISCHARGE, 1200), (FORCE_CHARGE, 1200), (0, 1200), (None, 1200)],
 )
 def test_force_power_maximum_follows_mode(
     remote_control: int | None, maximum: int
@@ -116,20 +116,20 @@ def test_force_power_maximum_follows_mode(
     assert number.max_value == maximum
 
 
-async def test_force_power_rejects_more_than_800_while_discharging() -> None:
+async def test_force_power_rejects_more_than_1200_while_discharging() -> None:
     entry = make_entry({"remote_control": FORCE_DISCHARGE})
     number = ForcePowerNumber(entry, {}, FORCE_POWER_NUMBER_ENTITY_DESCRIPTION)
 
     with pytest.raises(ServiceValidationError):
-        await number.async_set_native_value(1200)
+        await number.async_set_native_value(1210)
     entry.runtime_data.hub.async_write_registers.assert_not_awaited()
 
-    await number.async_set_native_value(800)
+    await number.async_set_native_value(1200)
     assert [
         c.args for c in entry.runtime_data.hub.async_write_registers.await_args_list
     ] == [
-        (ACTIVE, [0, 800]),
-        (REACTIVE, [0, 800]),
+        (ACTIVE, [0, 1200]),
+        (REACTIVE, [0, 1200]),
     ]
 
 
@@ -150,21 +150,21 @@ async def test_force_power_is_checked_against_the_mode_on_the_device() -> None:
     number = ForcePowerNumber(entry, {}, FORCE_POWER_NUMBER_ENTITY_DESCRIPTION)
 
     with pytest.raises(ServiceValidationError):
-        await number.async_set_native_value(1200)
+        await number.async_set_native_value(1210)
 
     entry.runtime_data.hub.async_write_registers.assert_not_awaited()
 
 
-async def test_force_power_above_800_is_rejected_when_device_cannot_be_read() -> None:
+async def test_force_power_above_1200_is_rejected_when_device_cannot_be_read() -> None:
     entry = make_entry({"remote_control": FORCE_CHARGE})
     entry.runtime_data.coordinator.last_update_success = False
     number = ForcePowerNumber(entry, {}, FORCE_POWER_NUMBER_ENTITY_DESCRIPTION)
 
     with pytest.raises(ServiceValidationError):
-        await number.async_set_native_value(1200)
+        await number.async_set_native_value(1210)
     entry.runtime_data.hub.async_write_registers.assert_not_awaited()
 
-    await number.async_set_native_value(800)
+    await number.async_set_native_value(1200)
     assert entry.runtime_data.hub.async_write_registers.await_count == 2
 
 
@@ -175,7 +175,7 @@ async def test_remote_active_power_is_checked_against_the_mode_on_the_device() -
     number = SolakonNumber(entry, {}, description("remote_active_power"))
 
     with pytest.raises(ServiceValidationError):
-        await number.async_set_native_value(-1200)
+        await number.async_set_native_value(-1300)
 
     entry.runtime_data.hub.async_write_registers.assert_not_awaited()
 
@@ -196,8 +196,8 @@ async def test_switching_to_discharge_caps_the_setpoints_first(
     entry = make_entry(
         {
             "remote_control": FORCE_CHARGE,
-            "remote_active_power": 1200,
-            "remote_reactive_power": 1200,
+            "remote_active_power": 1500,
+            "remote_reactive_power": 1500,
         }
     )
     hub = entry.runtime_data.hub
@@ -213,8 +213,8 @@ async def test_switching_to_discharge_caps_the_setpoints_first(
     await cls(entry, {}, desc).async_select_option(option)
 
     assert calls == [
-        (ACTIVE, [0, 800]),
-        (REACTIVE, [0, 800]),
+        (ACTIVE, [0, 1200]),
+        (REACTIVE, [0, 1200]),
         (REMOTE_CONTROL, int(option)),
     ]
 
@@ -226,8 +226,8 @@ async def test_discharge_is_not_enabled_when_the_cap_fails(
     entry = make_entry(
         {
             "remote_control": FORCE_CHARGE,
-            "remote_active_power": 1200,
-            "remote_reactive_power": 1200,
+            "remote_active_power": 1500,
+            "remote_reactive_power": 1500,
         }
     )
     entry.runtime_data.hub.async_write_registers.return_value = False
@@ -251,8 +251,8 @@ async def test_switching_to_discharge_caps_setpoints_the_cache_does_not_know(
         },
         device={
             "remote_control": FORCE_CHARGE,
-            "remote_active_power": 1200,
-            "remote_reactive_power": 1200,
+            "remote_active_power": 1500,
+            "remote_reactive_power": 1500,
         },
     )
 
@@ -260,8 +260,8 @@ async def test_switching_to_discharge_caps_setpoints_the_cache_does_not_know(
 
     hub = entry.runtime_data.hub
     assert [c.args for c in hub.async_write_registers.await_args_list] == [
-        (ACTIVE, [0, 800]),
-        (REACTIVE, [0, 800]),
+        (ACTIVE, [0, 1200]),
+        (REACTIVE, [0, 1200]),
     ]
     hub.async_write_register.assert_awaited_once_with(REMOTE_CONTROL, int(option))
 
@@ -290,7 +290,7 @@ async def test_mode_switch_waits_for_a_running_setpoint_write() -> None:
     device = {
         "remote_control": FORCE_CHARGE,
         "remote_active_power": 300,
-        "remote_reactive_power": 300,
+        "remote_reactive_power": -1500,
     }
     entry = make_entry(dict(device), device=device)
     coordinator = entry.runtime_data.coordinator
@@ -303,7 +303,10 @@ async def test_mode_switch_waits_for_a_running_setpoint_write() -> None:
 
     async def write_registers(address: int, values: list[int]) -> bool:
         await asyncio.sleep(0)
-        device[by_address[address]] = values[1]
+        raw_value = (values[0] << 16) | values[1]
+        device[by_address[address]] = (
+            raw_value if raw_value < 0x80000000 else raw_value - 0x100000000
+        )
         return True
 
     async def write_register(address: int, value: int) -> bool:
@@ -314,16 +317,16 @@ async def test_mode_switch_waits_for_a_running_setpoint_write() -> None:
     hub.async_write_registers.side_effect = write_registers
     hub.async_write_register.side_effect = write_register
 
-    number = ForcePowerNumber(entry, {}, FORCE_POWER_NUMBER_ENTITY_DESCRIPTION)
+    number = SolakonNumber(entry, {}, description("remote_reactive_power"))
     select = ForceModeSelect(entry, {}, FORCE_MODE_SELECT_ENTITY_DESCRIPTION)
     await asyncio.gather(
-        number.async_set_native_value(1200), select.async_select_option("1")
+        number.async_set_native_value(-1500), select.async_select_option("1")
     )
 
     assert device == {
         "remote_control": FORCE_DISCHARGE,
-        "remote_active_power": 800,
-        "remote_reactive_power": 800,
+        "remote_active_power": 300,
+        "remote_reactive_power": -1200,
     }
 
 
